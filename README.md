@@ -7,12 +7,6 @@
 - Multiple Download with Multiple Thread
 - Able to configure Logging Function
 
-# FUSO
-Library project code is FUSO.
-
-File Util for Simple Object
-
-![](resources/fuso.jpg)
 
 # Import
 import github.com/chixm/filedownloader
