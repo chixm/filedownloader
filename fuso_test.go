@@ -146,3 +146,14 @@ func TestFileExists(t *testing.T) {
 	}
 	t.Log(bytes)
 }
+
+func TestSplitFileDownload(t *testing.T) {
+	conf := Config{logfunc: myLogger, MaxDownloadThreads: 1, DownloadTimeoutMinutes: 3, MaxRetry: 3}
+	fileDownloader := New(&conf)
+	// test download file 512MB
+	err := fileDownloader.SplitFileDownload(`https://freetestdata.com/wp-content/uploads/2022/02/Free_Test_Data_15MB_MP4.mp4`, `./15MB.mp4`, 3)
+	if err != nil {
+		t.Error(err)
+	}
+	t.Log(`Test Done`)
+}
