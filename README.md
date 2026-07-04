@@ -1,6 +1,8 @@
 # filedownloader
  Download File from Internet
 
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/chixm2019)
+
 # Multipurpose File Downloader for Go
 - Easy to download files from internet
 - Progress Channel to receive downloading progress
