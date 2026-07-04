@@ -133,6 +133,7 @@ func (m *FileDownloader) downloadFiles(downloads []*Download) {
 	dlCond := sync.NewCond(&sync.Mutex{})
 	currentThreadCnt := 0
 	var wg sync.WaitGroup
+	var errMu sync.Mutex
 	// download context
 	ctx2, timeoutFunc := context.WithTimeout(ctx, time.Minute*time.Duration(m.conf.DownloadTimeoutMinutes))
 	defer timeoutFunc()
@@ -149,7 +150,13 @@ func (m *FileDownloader) downloadFiles(downloads []*Download) {
 		go func() {
 			defer wg.Done()
 			defer dlCond.Signal()
-			downloadFile(ctx3, url, localPath, downloadedBytes, useResume, resume.contentLength, m.logfunc)
+			if err := downloadFile(ctx3, url, localPath, downloadedBytes, useResume, resume.contentLength, m.logfunc); err != nil {
+				errMu.Lock()
+				if m.err == nil {
+					m.err = err
+				}
+				errMu.Unlock()
+			}
 		}()
 		currentThreadCnt++
 		// stop for loop when reached to max threads.
@@ -165,8 +172,10 @@ func (m *FileDownloader) downloadFiles(downloads []*Download) {
 	m.logfunc(`Wait group is waiting for download.`)
 	// wait for all download ends.
 	wg.Wait()
-	// at last get the context error
-	m.err = ctx.Err()
+	// preserve the first per-file download error; fall back to the context error (e.g. timeout)
+	if m.err == nil {
+		m.err = ctx.Err()
+	}
 	m.logfunc(`All Download Task Done.`)
 }
 

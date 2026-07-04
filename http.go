@@ -35,53 +35,43 @@ func getFileSizeAndResumable(url string) (int64, bool, error) {
 }
 
 // Download Single File
-func downloadFile(ctx context.Context, url string, localFilePath string, downloadedBytes chan int, useResume bool, filesize int64, log func(param ...interface{})) {
+func downloadFile(ctx context.Context, url string, localFilePath string, downloadedBytes chan int, useResume bool, filesize int64, log func(param ...interface{})) error {
 	select {
 	case <-ctx.Done():
 		log(`Download Cancelled by context`)
-		return
+		return ctx.Err()
 	default:
 		file, offset, err := setupDownloadFile(localFilePath, useResume)
 		if err != nil {
-			return
+			return err
 		}
 		defer file.Close()
 		r, err := http.NewRequestWithContext(ctx, `GET`, url, nil)
+		if err != nil {
+			return err
+		}
 		if useResume {
 			r.Header.Add(`Range`, rangeHeaderValue(file, offset, filesize))
 			log(`Resume enabled, added download header::`, r.Header)
 		}
-		if err != nil {
-			return
-		}
 		// download file
 		resp, err := http.DefaultClient.Do(r)
 		if err != nil {
-			ctx = context.WithValue(ctx, downloadError, err)
-			return
+			return err
 		}
 		defer resp.Body.Close()
 		readSource := &responseReader{Reader: resp.Body, readBytes: downloadedBytes}
 		_, err = copyBuffer(ctx, file, readSource, nil)
 		if err != nil {
 			if err == ErrCancelCopy {
-				ctx = context.WithValue(ctx, cancelError, err)
 				log(`Download File Cancelled[` + url + `]`)
-			} else {
-				ctx = context.WithValue(ctx, downloadError, err)
 			}
-			return
+			return err
 		}
 	}
 	log(`Download File Done[` + url + `]`)
+	return nil
 }
-
-// DownloadError is a string used for context value key.
-type DownloadError string
-
-var downloadError DownloadError = `downloadError`
-
-var cancelError DownloadError = `cancelDownloadError`
 
 // responseReader http response reader with channels
 type responseReader struct {
